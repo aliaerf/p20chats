@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Encoded URL Chat</title>
+    <title>Plain Text Chat</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         #chat-container { width: 100%; max-width: 500px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; display: flex; flex-direction: column; gap: 10px; }
         
-        .message { max-width: 70%; padding: 10px 15px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; }
-        
-        /* Receiver Styles (Left) */
+        .message { max-width: 70%; padding: 10px 15px; border-radius: 18px; font-size: 14px; line-height: 1.4; }
         .receiver { align-self: flex-start; background-color: #e4e6eb; color: black; border-bottom-left-radius: 2px; }
-        
-        /* Sender Styles (Right) */
         .sender { align-self: flex-end; background-color: #0084ff; color: white; border-bottom-right-radius: 2px; }
 
-        .error { color: #cc0000; text-align: center; font-size: 0.9em; }
+        .error { color: #cc0000; text-align: center; font-size: 0.9em; margin-top: 20px; }
+        
+        /* Small helper box for you */
+        #helper { margin-top: 30px; padding: 15px; background: #fff; border: 1px solid #ddd; border-radius: 8px; width: 100%; max-width: 500px; font-size: 13px; }
+        input { width: 80%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px; background: #0084ff; color: white; border: none; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -24,44 +25,54 @@
 <div id="chat-container">
     </div>
 
+<div id="helper">
+    <strong>Create a Link:</strong><br>
+    <small>Use s: for sender, r: for receiver. Separate with |</small><br><br>
+    <input type="text" id="chatInput" placeholder="s:Hello|r:Hi there!">
+    <button onclick="makeLink()">Go</button>
+</div>
+
 <script>
     function displayChat() {
         const container = document.getElementById('chat-container');
         const urlParams = new URLSearchParams(window.location.search);
-        const encodedData = urlParams.get('m'); // Expecting ?m=BASE64_STRING
+        
+        // 1. Get the 'm' parameter (Plain Text)
+        const rawData = urlParams.get('m'); 
 
-        if (!encodedData) {
-            container.innerHTML = "<p class='error'>No messages found. Use the 'm' parameter in the URL.</p>";
+        if (!rawData) {
+            container.innerHTML = "<p class='error'>No messages found. Add ?m=s:Hello|r:Hi to the URL.</p>";
             return;
         }
 
-        try {
-            // 1. Decode the Base64 string
-            const decodedString = atob(encodedData);
-            
-            // 2. Split messages by a delimiter (we'll use '|')
-            // Format expected: "s:Hello|r:Hi there|s:How are you?"
-            const messages = decodedString.split('|');
+        // 2. Split messages by the pipe symbol |
+        const messages = rawData.split('|');
 
-            messages.forEach(msg => {
-                const type = msg.substring(0, 2); // "s:" or "r:"
-                const text = msg.substring(2);
-                
-                const msgDiv = document.createElement('div');
-                msgDiv.classList.add('message');
-                
-                if (type === 's:') {
-                    msgDiv.classList.add('sender');
-                } else {
-                    msgDiv.classList.add('receiver');
-                }
-                
-                msgDiv.textContent = text;
-                container.appendChild(msgDiv);
-            });
-        } catch (e) {
-            container.innerHTML = "<p class='error'>Error decoding messages. Ensure the URL is valid Base64.</p>";
-        }
+        messages.forEach(msg => {
+            if (msg.length < 3) return; // Skip empty or invalid entries
+
+            const type = msg.substring(0, 2); // Get "s:" or "r:"
+            const text = msg.substring(2);    // Get the actual message
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message');
+            
+            if (type === 's:') {
+                msgDiv.classList.add('sender');
+            } else {
+                msgDiv.classList.add('receiver');
+            }
+            
+            msgDiv.textContent = decodeURIComponent(text);
+            container.appendChild(msgDiv);
+        });
+    }
+
+    // Function to help you generate links quickly
+    function makeLink() {
+        const val = document.getElementById('chatInput').value;
+        const baseUrl = window.location.origin + window.location.pathname;
+        window.location.href = baseUrl + "?m=" + encodeURIComponent(val);
     }
 
     window.onload = displayChat;
