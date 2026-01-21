@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Viewer</title>
+    <title>Long Format Chat</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -11,48 +11,50 @@
             display: flex; 
             justify-content: center; 
             padding: 20px; 
+            margin: 0;
         }
         #chat-container { 
             width: 100%; 
-            max-width: 500px; 
+            max-width: 600px; 
             background: white; 
-            border-radius: 10px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
-            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            padding: 25px; 
             display: flex; 
             flex-direction: column; 
-            gap: 10px; 
+            gap: 12px; 
+            min-height: 100px;
         }
         
         .message { 
-            max-width: 75%; 
-            padding: 10px 15px; 
-            border-radius: 18px; 
+            max-width: 80%; 
+            padding: 12px 16px; 
+            border-radius: 20px; 
             font-size: 15px; 
-            line-height: 1.4; 
+            line-height: 1.5; 
+            word-wrap: break-word; /* Ensures long words don't break layout */
         }
         
-        /* Receiver Styles (Left) */
         .receiver { 
             align-self: flex-start; 
             background-color: #e4e6eb; 
-            color: black; 
-            border-bottom-left-radius: 2px; 
+            color: #050505; 
+            border-bottom-left-radius: 4px; 
         }
         
-        /* Sender Styles (Right) */
         .sender { 
             align-self: flex-end; 
             background-color: #0084ff; 
             color: white; 
-            border-bottom-right-radius: 2px; 
+            border-bottom-right-radius: 4px; 
         }
 
-        .error { 
-            color: #65676b; 
+        .info-msg { 
+            color: #8a8d91; 
             text-align: center; 
-            font-size: 0.9em; 
-            margin-top: 20px; 
+            font-size: 0.85em; 
+            margin-top: 50px; 
+            font-style: italic;
         }
     </style>
 </head>
@@ -62,41 +64,50 @@
     </div>
 
 <script>
-    function displayChat() {
+    function loadChat() {
         const container = document.getElementById('chat-container');
-        const urlParams = new URLSearchParams(window.location.search);
-        const rawData = urlParams.get('m'); 
+        
+        // 1. Get data from the Hash (#) instead of the Question Mark (?)
+        // This allows for much longer strings of text.
+        let rawData = window.location.hash.substring(1); 
+
+        // Fallback: If hash is empty, check for the old ?m= format
+        if (!rawData) {
+            const urlParams = new URLSearchParams(window.location.search);
+            rawData = urlParams.get('m') || "";
+        }
 
         if (!rawData) {
-            container.innerHTML = "<p class='error'>No messages found in the URL.</p>";
+            container.innerHTML = "<p class='info-msg'>Paste your text after the # in the URL.<br>Example: #s:Hello|r:Hi</p>";
             return;
         }
 
-        // Split by the | symbol
-        const messages = rawData.split('|');
+        // 2. Decode the URL characters so spaces and symbols look right
+        const decodedData = decodeURIComponent(rawData);
+
+        // 3. Split by the | symbol
+        const messages = decodedData.split('|');
 
         messages.forEach(msg => {
-            if (msg.length < 3) return; // Ignore empty strings
+            if (msg.length < 3) return;
 
-            const type = msg.substring(0, 2); // Takes "s:" or "r:"
-            const text = msg.substring(2);    // Takes the message text
+            const type = msg.substring(0, 2); 
+            const text = msg.substring(2);
             
             const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message');
-            
-            if (type === 's:') {
-                msgDiv.classList.add('sender');
-            } else if (type === 'r:') {
-                msgDiv.classList.add('receiver');
-            }
-            
-            // Decodes URL characters (like %20 for space) back to normal text
-            msgDiv.textContent = decodeURIComponent(text);
+            msgDiv.className = 'message ' + (type === 's:' ? 'sender' : 'receiver');
+            msgDiv.textContent = text;
             container.appendChild(msgDiv);
         });
     }
 
-    window.onload = displayChat;
+    // Reload the chat automatically if the URL hash changes
+    window.onhashchange = () => {
+        document.getElementById('chat-container').innerHTML = "";
+        loadChat();
+    };
+
+    window.onload = loadChat;
 </script>
 
 </body>
