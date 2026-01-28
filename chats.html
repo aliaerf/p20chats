@@ -66,7 +66,6 @@
         .sender .timestamp { color: rgba(255, 255, 255, 0.75); }
         .receiver .timestamp { color: #65676b; }
 
-        /* NEW: Date Header Style */
         .date-label {
             text-align: center;
             font-size: 12px;
@@ -120,36 +119,58 @@
             const type = msg.substring(0, 2); 
             const rawContent = msg.substring(2);
             
-            // 1. Separate Metadata (Date/Time) from Message text using '~'
-            let metadata = "";
+            // Split Date/Time from Message using '~'
+            let rawDateTime = "";
             let messageText = rawContent;
             
             const separatorIndex = rawContent.indexOf('~');
             if (separatorIndex !== -1) {
-                metadata = rawContent.substring(0, separatorIndex);
+                rawDateTime = rawContent.substring(0, separatorIndex); // e.g., "2023-10-28 14:30"
                 messageText = rawContent.substring(separatorIndex + 1);
             }
 
-            // 2. Separate Date from Time using '@'
-            let dateText = null;
-            let timeText = metadata;
+            // --- DATE & TIME PARSING LOGIC ---
+            let displayDate = "";
+            let displayTime = "";
 
-            if (metadata.includes('@')) {
-                const dateParts = metadata.split('@');
-                dateText = dateParts[0];
-                timeText = dateParts[1];
+            if (rawDateTime && rawDateTime.includes(' ')) {
+                // Input format is expected to be "YYYY-MM-DD HH:MM"
+                const parts = rawDateTime.split(' ');
+                const datePart = parts[0]; // 2023-10-28
+                const timePart = parts[1]; // 14:30
+
+                // 1. Format the Date (e.g., "2023-10-28" -> "Oct 28, 2023")
+                const dateObj = new Date(datePart);
+                if (!isNaN(dateObj)) {
+                   displayDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                } else {
+                   displayDate = datePart; // Fallback if parsing fails
+                }
+
+                // 2. Format the Time (e.g., "14:30" -> "2:30 PM")
+                // We create a dummy date to use toLocaleTimeString
+                const timeObj = new Date("1970-01-01T" + timePart + ":00");
+                if (!isNaN(timeObj)) {
+                    displayTime = timeObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                } else {
+                    displayTime = timePart; // Fallback
+                }
+            } else {
+                // If format isn't standard, just treat the whole thing as time
+                displayTime = rawDateTime;
             }
+            // ----------------------------------
 
-            // 3. Render Date Header if the date has changed
-            if (dateText && dateText !== lastSeenDate) {
+            // Render Date Header if the date has changed
+            if (displayDate && displayDate !== lastSeenDate) {
                 const dateDiv = document.createElement('div');
                 dateDiv.className = 'date-label';
-                dateDiv.textContent = dateText;
+                dateDiv.textContent = displayDate;
                 container.appendChild(dateDiv);
-                lastSeenDate = dateText; // Update tracker
+                lastSeenDate = displayDate; 
             }
 
-            // 4. Create Message Bubble
+            // Create Message Bubble
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message ' + (type === 's:' ? 'sender' : 'receiver');
             
@@ -157,10 +178,10 @@
             textSpan.textContent = messageText;
             msgDiv.appendChild(textSpan);
 
-            if (timeText) {
+            if (displayTime) {
                 const timeSpan = document.createElement('span');
                 timeSpan.className = 'timestamp';
-                timeSpan.textContent = timeText;
+                timeSpan.textContent = displayTime;
                 msgDiv.appendChild(timeSpan);
             }
 
