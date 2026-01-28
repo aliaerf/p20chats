@@ -12,7 +12,6 @@
             display: flex;
             justify-content: center;
         }
-        /* Added a wrapper to allow scrolling while keeping background clean */
         .page-wrapper {
             width: 100%;
             max-width: 600px;
@@ -27,17 +26,19 @@
             display: flex; 
             flex-direction: column; 
             gap: 12px;
-            min-height: 90vh; /* Takes up most of the screen */
+            min-height: 90vh; 
         }
         
         .message { 
             max-width: 85%; 
-            padding: 12px 16px; 
+            padding: 10px 16px 8px 16px; 
             border-radius: 20px; 
             font-size: 15px; 
-            line-height: 1.5; 
+            line-height: 1.4; 
             word-wrap: break-word;
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
         
         .receiver { 
@@ -52,6 +53,28 @@
             background-color: #0084ff; 
             color: white; 
             border-bottom-right-radius: 4px; 
+        }
+
+        .timestamp {
+            font-size: 11px;
+            margin-top: 4px;
+            text-align: right;
+            align-self: flex-end;
+            min-width: 40px;
+        }
+
+        .sender .timestamp { color: rgba(255, 255, 255, 0.75); }
+        .receiver .timestamp { color: #65676b; }
+
+        /* NEW: Date Header Style */
+        .date-label {
+            text-align: center;
+            font-size: 12px;
+            color: #8a8d91;
+            font-weight: 500;
+            margin: 15px 0 5px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .info-msg { 
@@ -72,7 +95,6 @@
     function loadChat() {
         const container = document.getElementById('chat-container');
         
-        // Use Hash (#) for extra long content
         let rawData = window.location.hash.substring(1); 
 
         if (!rawData) {
@@ -85,25 +107,66 @@
             return;
         }
 
-        // Clean existing content
         container.innerHTML = "";
 
         const decodedData = decodeURIComponent(rawData);
         const messages = decodedData.split('|');
 
+        let lastSeenDate = null;
+
         messages.forEach(msg => {
             if (msg.length < 3) return;
 
             const type = msg.substring(0, 2); 
-            const text = msg.substring(2);
+            const rawContent = msg.substring(2);
             
+            // 1. Separate Metadata (Date/Time) from Message text using '~'
+            let metadata = "";
+            let messageText = rawContent;
+            
+            const separatorIndex = rawContent.indexOf('~');
+            if (separatorIndex !== -1) {
+                metadata = rawContent.substring(0, separatorIndex);
+                messageText = rawContent.substring(separatorIndex + 1);
+            }
+
+            // 2. Separate Date from Time using '@'
+            let dateText = null;
+            let timeText = metadata;
+
+            if (metadata.includes('@')) {
+                const dateParts = metadata.split('@');
+                dateText = dateParts[0];
+                timeText = dateParts[1];
+            }
+
+            // 3. Render Date Header if the date has changed
+            if (dateText && dateText !== lastSeenDate) {
+                const dateDiv = document.createElement('div');
+                dateDiv.className = 'date-label';
+                dateDiv.textContent = dateText;
+                container.appendChild(dateDiv);
+                lastSeenDate = dateText; // Update tracker
+            }
+
+            // 4. Create Message Bubble
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message ' + (type === 's:' ? 'sender' : 'receiver');
-            msgDiv.textContent = text;
+            
+            const textSpan = document.createElement('span');
+            textSpan.textContent = messageText;
+            msgDiv.appendChild(textSpan);
+
+            if (timeText) {
+                const timeSpan = document.createElement('span');
+                timeSpan.className = 'timestamp';
+                timeSpan.textContent = timeText;
+                msgDiv.appendChild(timeSpan);
+            }
+
             container.appendChild(msgDiv);
         });
 
-        // Scroll to the bottom automatically
         window.scrollTo(0, document.body.scrollHeight);
     }
 
