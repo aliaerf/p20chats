@@ -161,15 +161,6 @@
             }
             // ----------------------------------
 
-            // --- TRUNCATION LOGIC (Added) ---
-            const fullText = messageText; // Keep original for tooltip
-            const CHAR_LIMIT = 300;
-
-            if (messageText.length > CHAR_LIMIT) {
-                messageText = messageText.substring(0, CHAR_LIMIT) + '...';
-            }
-            // ----------------------------------
-
             // Render Date Header if the date has changed
             if (displayDate && displayDate !== lastSeenDate) {
                 const dateDiv = document.createElement('div');
@@ -185,7 +176,6 @@
             
             const textSpan = document.createElement('span');
             textSpan.textContent = messageText;
-            textSpan.title = fullText; // Show full text on hover
             msgDiv.appendChild(textSpan);
 
             if (displayTime) {
